@@ -182,6 +182,7 @@ class TSPEnv(Env):
 
     def enable_video_capturing(self, video_save_path: str):
         self.video_save_path = video_save_path
+        self.render_mode = 'rgb_array'
         if self.video_save_path is not None:
             self.vid = VideoRecorder(self, self.video_save_path)
             self.vid.frames_per_sec = 1
