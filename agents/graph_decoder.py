@@ -87,6 +87,12 @@ class GraphDecoder(nn.Module):
         if load is None:
             context = torch.cat([graph_emb, self.first_, self.last_], -1)
         else:
+
+            print(graph_emb.shape)
+            print(self.last_.shape)
+            print(load[:, None, None].shape)
+
+
             context = torch.cat([graph_emb, self.last_, load[:, None, None]], -1)
             context = self._context_proj(context)
 
