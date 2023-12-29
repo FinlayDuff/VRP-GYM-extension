@@ -67,7 +67,7 @@ class SantaIRPEnv(TSPEnv):
 
 
     # Update
-    # Wind Effect:
+    # Energy cost and Wind Effect:
     def calculate_energy_cost(self, traversed_edges):
         # Calculate the distance between each pair of nodes in traversed_edges
         # traversed_edges is an array of shape (batch_size, 2) where each row is [from_node, to_node]
@@ -170,8 +170,8 @@ class SantaIRPEnv(TSPEnv):
                 self.load[i] = 0  # Coal delivered
                 reward[i] += self.COAL_DELIVERY_REWARD
 
-            # Penalize for energy inefficiency
-            reward[i] -= energy_cost[i]  # You might want to scale this
+            # Penalise for energy inefficiency
+            reward[i] -= energy_cost[i]  # Scale this???
 
         # Check for energy depletion and handle
         for i in range(self.batch_size):
@@ -228,7 +228,7 @@ class SantaIRPEnv(TSPEnv):
             - Graph state with shape (batch_size, num_nodes, 5)
             - Vehicle state with shape (batch_size, 2)
         """
-        # Assuming the full state is a NumPy array with shape (batch_size, num_nodes, 7)
+        
         full_state = super().get_state()
 
         # Split the state into graph state and vehicle state
