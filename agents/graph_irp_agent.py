@@ -101,7 +101,7 @@ class IRPModel(TSPModel):
             )
 
         self.decoder.reset()
-
+        
         return acc_loss, acc_log_prob  # shape (batch_size), shape (batch_size)
 
 
