@@ -26,8 +26,8 @@ class TSPFFNetwork(nn.Module):
 
         done = False
         state = torch.tensor(env.get_state(), dtype=torch.float, device=self.device)
-        acc_loss = torch.zeros(size=(state.shape[0],), device=self.device)
-        acc_log_prob = torch.zeros(size=(state.shape[0],), device=self.device)
+        rewards = []
+        log_probs = []
 
         while not done:
             # Pushing the state through the layers
@@ -62,12 +62,11 @@ class TSPFFNetwork(nn.Module):
 
             state, loss, done, _ = env.step(actions.cpu().numpy())
 
-            current_loss = torch.tensor(loss, dtype=torch.float, device=self.device)
-            acc_loss += current_loss
-            acc_log_prob += log_prob.squeeze().to(self.device)
+            log_probs.append(log_prob.squeeze().to(self.device))
+            rewards.append(torch.tensor(loss, dtype=torch.float, device=self.device))
 
             state = torch.tensor(env.get_state(), dtype=torch.float, device=self.device)
-        return acc_loss, acc_log_prob
+        return torch.stack(rewards), torch.stack(log_probs)
 
 
 class TSPAgentFF:
@@ -114,13 +113,13 @@ class TSPAgentFF:
         for episode in range(episodes):
             self.model.train()
 
-            cum_loss, cum_log_prob = self.step(env, [False, False])
+            rewards, log_probs = self.step(env, [False, False])
 
             # Compute discounted rewards (returns)
-            returns = self.discount_rewards(cum_loss)
+            discounted_rewards = self.discount_rewards(rewards)
 
             # Calculate loss
-            loss = (-cum_log_prob * returns).mean()
+            loss = (-log_probs * discounted_rewards).mean()
 
             # Backpropagation
             self.opt.zero_grad()
