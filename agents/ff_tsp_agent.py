@@ -25,16 +25,26 @@ class TSPFFNetwork(nn.Module):
         # Forward pass through the network
 
         done = False
-        state = torch.tensor(env.get_state(), dtype=torch.float, device=self.device)
+        irp_state, irp_load = env.get_state()
+        state = torch.tensor(irp_state, dtype=torch.float, device=self.device)
         rewards = []
         log_probs = []
 
         while not done:
             # Pushing the state through the layers
             x = state.view(state.shape[0], -1)
+            print(1)
+            print(x.shape)
+            print(x)
             x = self.layer1(x)
+            print(2)
+            print(x)
             x = self.layer2(x)
+            print(3)
+            print(x)
             x = self.output_layer(x)
+            print(4)
+            print(x)
             actions = F.softmax(x, dim=-1)  # Return the action probabilities
 
             # Mask the actions which are not allowed and normalise teh probabilities given these missing actions
@@ -64,8 +74,8 @@ class TSPFFNetwork(nn.Module):
 
             log_probs.append(log_prob.squeeze().to(self.device))
             rewards.append(torch.tensor(loss, dtype=torch.float, device=self.device))
-
-            state = torch.tensor(env.get_state(), dtype=torch.float, device=self.device)
+            irp_state, irp_load = env.get_state()
+            state = torch.tensor(irp_state, dtype=torch.float, device=self.device)
         return torch.stack(rewards), torch.stack(log_probs)
 
 

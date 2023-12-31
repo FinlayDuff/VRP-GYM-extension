@@ -107,7 +107,7 @@ class IRPEnv(TSPEnv):
                 The third dimension is structured as follows:
             [x_coord, y_coord, demand, is_depot, visitable]
         """
-
+ 
         # generate state (depots not yet set)
         state = np.dstack(
             [
