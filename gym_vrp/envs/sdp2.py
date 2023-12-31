@@ -44,7 +44,7 @@ class SantaIRPEnv(IRPEnv):
             self.santa_carrying = {'present': 1, 'coal': 0} if item_choice == "present" else {'present': 0, 'coal': 1}
 
     def step(self, action):
-        print("Step method called. self.santa_carrying:", self.santa_carrying)
+        #print("Step method called. self.santa_carrying:", self.santa_carrying)
 
         observation, reward, done, info = super().step(action)
         current_node = action[0]
@@ -79,7 +79,7 @@ class SantaIRPEnv(IRPEnv):
         else:
             # Deliver items and update santa_carrying
             # Check if the delivery is correct
-            print("Before accessing self.santa_carrying:", self.santa_carrying)
+            #print("Before accessing self.santa_carrying:", self.santa_carrying)
             if self.child_behavior[current_node] == 'good':
                 if self.santa_carrying['present'] > 0:
                     # Correct delivery of present
