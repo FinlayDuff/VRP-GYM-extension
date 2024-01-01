@@ -1,11 +1,29 @@
 import numpy as np
+import torch
 from .irp import IRPEnv
 
 class SantaIRPEnv(IRPEnv):
+    
+    """
+    SantaIRPEnv implements the Santa Inventory Routing Problem a variant
+    of the Vehicle Routing Problem. The vehicle has a
+    capacity of 1. Visiting a node is only allowed if the
+    cars capacity is greater or equal than the nodes demand.
+
+    State: Shape (batch_size, num_nodes, 6) The third
+        dimension is structured as follows:
+        [x_coord, y_coord, demand, is_depot, visitable, good_or_bad]
+
+    Actions: Depends on the number of nodes in every graph.
+        Should contain the node numbers to visit next for
+        each graph. Shape (batch_size, 1)
+    """
+        
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.seed = np.random.seed(23)
-        self.child_behavior = None
+
+        self.child_behavior = np.random.choice(['good', 'bad'], size=self.num_nodes)
         
         # Configurable reward and penalty values
         self.max_energy = 100
@@ -60,11 +78,11 @@ class SantaIRPEnv(IRPEnv):
             if self.energy_strategy == "stop":
                 # This just stops it for now, we may consider other ways to deal with this
                 # Apply energy depletion penalty
-                reward += self.energy_depletion_penalty
+                reward -= self.energy_depletion_penalty
                 done = True
             else:
                 # Apply energy depletion penalty
-                reward += self.energy_depletion_penalty
+                reward -= self.energy_depletion_penalty
 
                 # Automatically return Santa to the depot
                 current_node = self.depots[0]
@@ -76,6 +94,7 @@ class SantaIRPEnv(IRPEnv):
             self.energy = self.max_energy
             # Present/Coal pick up strategy
             self.pickup()
+        """
         else:
             # Deliver items and update santa_carrying
             # Check if the delivery is correct
@@ -97,5 +116,32 @@ class SantaIRPEnv(IRPEnv):
                 else:
                     # Incorrect delivery (Santa doesn't have coal for a bad child)
                     reward += self.incorrect_delivery_penalty
+        """
 
         return observation, reward, done, info
+
+    def get_state(self):
+        state, load = super().get_state()
+
+        child_behavior_state = self.child_behavior[:,None,None]
+
+        # updated_state = torch.cat((state, self.child_behavior), dim=2)
+        updated_state = np.concatenate((state, child_behavior_state), axis=-1)
+
+        return updated_state, load
+    
+    def generate_mask(self):
+        mask = super().generate_mask()
+
+        # Get indices of good and bad children
+        good_child_indices = np.where(self.child_behavior == 'good')[0]
+        bad_child_indices = np.where(self.child_behavior == 'bad')[0]
+
+        if self.santa_carrying['present'] == 0:
+            # If Santa has no presents, mark nodes with good children as unvisitable
+            mask[good_child_indices] = 1
+        if self.santa_carrying['coal'] == 0:
+            # If Santa has no coal, mark nodes with bad children as unvisitable
+            mask[bad_child_indices] = 1
+
+        return mask

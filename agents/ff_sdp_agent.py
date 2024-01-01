@@ -92,7 +92,7 @@ class SDPAgentFF:
         self.csv_path = csv_path
         self.gamma = gamma
         self.model = FFNetwork(
-            input_dim=node_dim * 5,
+            input_dim=node_dim * 6,
             hidden_dim=hidden_dim,
             output_dim=node_dim,
         ).to(self.device)
