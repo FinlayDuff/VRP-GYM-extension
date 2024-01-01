@@ -46,7 +46,8 @@ class SantaIRPEnv(IRPEnv):
         
     def reset(self):
         state = super().reset()
-        self.child_behavior = np.random.choice(['good', 'bad'], size=self.num_nodes)
+        # Convert 'good' to 1 and 'bad' to 0
+        self.child_behavior = np.random.choice([1, 0], size=self.num_nodes)
         self.energy = self.max_energy
         self.santa_carrying = {'present': 0, 'coal': 0}
         self.pickup()
@@ -119,16 +120,24 @@ class SantaIRPEnv(IRPEnv):
         """
 
         return observation, reward, done, info
-
+    
     def get_state(self):
         state, load = super().get_state()
 
-        child_behavior_state = self.child_behavior[:,None,None]
+        batch_size, num_nodes, _ = state.shape
 
-        # updated_state = torch.cat((state, self.child_behavior), dim=2)
+        # Ensure child_behavior is numerical and correctly shaped
+        if self.child_behavior.ndim == 1:
+            child_behavior_expanded = np.tile(self.child_behavior, (batch_size, 1))
+        else:
+            child_behavior_expanded = self.child_behavior
+
+        child_behavior_state = child_behavior_expanded.reshape(batch_size, num_nodes, 1)
+
         updated_state = np.concatenate((state, child_behavior_state), axis=-1)
 
         return updated_state, load
+
     
     def generate_mask(self):
         mask = super().generate_mask()
