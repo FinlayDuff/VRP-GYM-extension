@@ -26,27 +26,23 @@ class SantaIRPEnv(IRPEnv):
         self.child_behavior = np.random.choice(['good', 'bad'], size=self.num_nodes)
         
         # Configurable reward and penalty values
-        self.max_energy = 100
+        # self.max_energy = self.num_nodes * 100
+        self.max_energy = 75
         self.energy = self.max_energy
-        self.correct_delivery_reward = 10
-        self.incorrect_delivery_penalty = -10
         self.energy_depletion_penalty = -50
 
         # Wind factor related variables
         self.energy_strategy = "return" # "stop": Stops the run or "return": Back to depot, apply penalty and continue (default)
-        self.base_energy_consumption_rate = 4
-        self.wind_factor_range = (0.8, 1.2)  # Wind can decrease or increase energy consumption
+        # self.base_energy_consumption_rate = self.num_nodes
+        self.base_energy_consumption_rate = 10
+        self.wind_factor_range = (0.5, 1.5)  # Wind can decrease or increase energy consumption
 
         # Santa can carry multiple items
-        self.pickup_stragey = "either" # Either: Pickus up either 1 coal or 1 present (defualt), "both": Picks up both upto max, "random": picks up a random between 0 and max for each
         self.santa_carrying = {'present': 0, 'coal': 0}
         self.pickup()
-        self.max_presents = 1
-        self.max_coal = 1
         
     def reset(self):
         state = super().reset()
-        # Convert 'good' to 1 and 'bad' to 0
         self.child_behavior = np.random.choice([1, 0], size=self.num_nodes)
         self.energy = self.max_energy
         self.santa_carrying = {'present': 0, 'coal': 0}
@@ -54,16 +50,10 @@ class SantaIRPEnv(IRPEnv):
         return state
     
     def pickup(self):
-        if self.pickup_stragey == 'both':
-            self.santa_carrying = {'present': self.max_presents, 'coal': self.max_coal}
-        elif self.pickup_stragey == 'random':
-            self.santa_carrying = {'present': np.random.randint(0, self.max_presents + 1), 'coal': np.random.randint(0, self.max_coal + 1)}
-        else:  # 'either'
-            item_choice = np.random.choice(['present', 'coal'])
-            self.santa_carrying = {'present': 1, 'coal': 0} if item_choice == "present" else {'present': 0, 'coal': 1}
+        item_choice = np.random.choice(['present', 'coal'])
+        self.santa_carrying = {'present': 1, 'coal': 0} if item_choice == "present" else {'present': 0, 'coal': 1}
 
     def step(self, action):
-        #print("Step method called. self.santa_carrying:", self.santa_carrying)
 
         observation, reward, done, info = super().step(action)
         current_node = action[0]
@@ -75,19 +65,24 @@ class SantaIRPEnv(IRPEnv):
         energy_consumption = self.base_energy_consumption_rate * wind_factor
         self.energy -= energy_consumption
 
+        #print(f"energy = {self.energy} and energy_consumption = {energy_consumption}")
+        #print(f"{self.energy}, ", end="")
         if self.energy <= 0:
             if self.energy_strategy == "stop":
                 # This just stops it for now, we may consider other ways to deal with this
                 # Apply energy depletion penalty
                 reward -= self.energy_depletion_penalty
                 done = True
-            else:
+            else: # "return"
+                # This returns to the depot
                 # Apply energy depletion penalty
                 reward -= self.energy_depletion_penalty
 
                 # Automatically return Santa to the depot
                 current_node = self.depots[0]
-                self.energy = self.max_energy
+
+                # print("Run out of energy, penalty applied")
+                print("!", end="")
 
         # Check if Santa is at the depot
         if current_node == self.depots[0]:
@@ -95,29 +90,6 @@ class SantaIRPEnv(IRPEnv):
             self.energy = self.max_energy
             # Present/Coal pick up strategy
             self.pickup()
-        """
-        else:
-            # Deliver items and update santa_carrying
-            # Check if the delivery is correct
-            #print("Before accessing self.santa_carrying:", self.santa_carrying)
-            if self.child_behavior[current_node] == 'good':
-                if self.santa_carrying['present'] > 0:
-                    # Correct delivery of present
-                    reward += self.correct_delivery_reward
-                    self.santa_carrying['present'] -= 1  # Update the number of presents Santa is carrying
-                else:
-                    # Incorrect delivery (Santa doesn't have a present for a good child)
-                    reward += self.incorrect_delivery_penalty
-
-            elif self.child_behavior[current_node] == 'bad':
-                if self.santa_carrying['coal'] > 0:
-                    # Correct delivery of coal
-                    reward += self.correct_delivery_reward
-                    self.santa_carrying['coal'] -= 1  # Update the number of coal Santa is carrying
-                else:
-                    # Incorrect delivery (Santa doesn't have coal for a bad child)
-                    reward += self.incorrect_delivery_penalty
-        """
 
         return observation, reward, done, info
     
@@ -133,7 +105,6 @@ class SantaIRPEnv(IRPEnv):
             child_behavior_expanded = self.child_behavior
 
         child_behavior_state = child_behavior_expanded.reshape(batch_size, num_nodes, 1)
-
         updated_state = np.concatenate((state, child_behavior_state), axis=-1)
 
         return updated_state, load
