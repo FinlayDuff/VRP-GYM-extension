@@ -23,19 +23,18 @@ class SantaIRPEnv(IRPEnv):
         super().__init__(*args, **kwargs)
         self.seed = np.random.seed(23)
 
-        self.child_behavior = np.random.choice(['good', 'bad'], size=self.num_nodes)
+        self.child_behavior = np.random.choice([1, 0], size=self.num_nodes) # 1 good, 0 bad
         
         # Configurable reward and penalty values
-        # self.max_energy = self.num_nodes * 100
-        self.max_energy = 75
+        self.max_energy = self.num_nodes # Factoring energey for different size nodes
         self.energy = self.max_energy
         self.energy_depletion_penalty = 50
 
         # Wind factor related variables
         self.energy_strategy = "return" # "stop": Stops the run or "return": Back to depot, apply penalty and continue (default)
         # self.base_energy_consumption_rate = self.num_nodes
-        self.base_energy_consumption_rate = 10
-        self.wind_factor_range = (0.5, 1.5)  # Wind can decrease or increase energy consumption
+        self.base_energy_consumption_rate = 1
+        self.wind_factor_range = (0.2, 1.2)  # Wind can decrease or increase energy consumption
 
         # Santa can carry multiple items
         self.santa_carrying = {'present': 0, 'coal': 0}
@@ -43,7 +42,7 @@ class SantaIRPEnv(IRPEnv):
         
     def reset(self):
         state = super().reset()
-        self.child_behavior = np.random.choice([1, 0], size=self.num_nodes)
+        self.child_behavior = np.random.choice([1, 0], size=self.num_nodes) # 1 good, 0 bad
         self.energy = self.max_energy
         self.santa_carrying = {'present': 0, 'coal': 0}
         self.pickup()
@@ -113,9 +112,9 @@ class SantaIRPEnv(IRPEnv):
     def generate_mask(self):
         mask = super().generate_mask()
 
-        # Get indices of good and bad children
-        good_child_indices = np.where(self.child_behavior == 'good')[0]
-        bad_child_indices = np.where(self.child_behavior == 'bad')[0]
+        # Get indices of good and bad children, 1 good 0 bad
+        good_child_indices = np.where(self.child_behavior == 1)[0]
+        bad_child_indices = np.where(self.child_behavior == 0)[0]
 
         if self.santa_carrying['present'] == 0:
             # If Santa has no presents, mark nodes with good children as unvisitable
