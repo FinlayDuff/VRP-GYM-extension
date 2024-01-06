@@ -36,12 +36,15 @@ class IRPEnv(TSPEnv):
         Args:
             num_nodes (int, optional): Number of nodes in each generated graph. Defaults to 32.
             batch_size (int, optional): Number of graphs to generate. Defaults to 128.
-            num_draw (int, optional): When calling the render num_draw graphs will be rendered. 
+            num_draw (int, optional): When calling the render num_draw graphs will be rendered.
                 Defaults to 6.
             seed (int, optional): Seed of the environment. Defaults to 69.
         """
         super().__init__(
-            num_nodes=num_nodes, batch_size=batch_size, num_draw=num_draw, seed=seed,
+            num_nodes=num_nodes,
+            batch_size=batch_size,
+            num_draw=num_draw,
+            seed=seed,
         )
 
         self.load = np.ones(shape=(batch_size,))
@@ -107,7 +110,7 @@ class IRPEnv(TSPEnv):
                 The third dimension is structured as follows:
             [x_coord, y_coord, demand, is_depot, visitable]
         """
- 
+
         # generate state (depots not yet set)
         state = np.dstack(
             [
