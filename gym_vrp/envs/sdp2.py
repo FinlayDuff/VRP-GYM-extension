@@ -31,7 +31,7 @@ class SantaIRPEnv(IRPEnv):
         self.max_energy = 75
 
         self.energy = self.max_energy * np.ones(self.batch_size)
-        self.energy_depletion_penalty = 50
+        self.energy_depletion_penalty = 20
 
         # Wind factor related variables
         self.energy_strategy = "return"  # "stop": Stops the run or "return": Back to depot, apply penalty and continue (default)
@@ -114,9 +114,9 @@ class SantaIRPEnv(IRPEnv):
             # Replenish load
             self.load = np.where(mask, 1, self.load)
 
-            if np.any(depleted):
-                print("energy", self.energy)
-                print("load", self.load)
+            # if np.any(depleted):
+            #     print("energy", self.energy)
+            #     print("load", self.load)
 
         return observation, reward, done, info
 
