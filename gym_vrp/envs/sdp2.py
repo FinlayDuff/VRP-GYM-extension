@@ -114,6 +114,10 @@ class SantaIRPEnv(IRPEnv):
             # Replenish load
             self.load = np.where(mask, 1, self.load)
 
+            if np.any(depleted):
+                print("energy", self.energy)
+                print("load", self.load)
+
         return observation, reward, done, info
 
     def get_state(self):

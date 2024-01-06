@@ -27,10 +27,6 @@ class FFNetwork(nn.Module):
             nn.Linear(hidden_dim, hidden_dim), nn.ReLU(), nn.Dropout(dropout_rate)
         )
 
-        self.layer3 = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim), nn.ReLU(), nn.Dropout(dropout_rate)
-        )
-
         self.output_layer = nn.Linear(hidden_dim, output_dim)
 
         # Baseline
@@ -54,7 +50,6 @@ class FFNetwork(nn.Module):
             x = state.view(state.shape[0], -1)
             x = self.layer1(x)
             x = self.layer2(x)
-            x = self.layer3(x)
 
             # store state value
             state_value = self.value_layer(x)
