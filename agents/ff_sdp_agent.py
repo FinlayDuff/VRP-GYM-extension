@@ -173,6 +173,7 @@ class SDPAgentFF:
             writer.writerow(["Epoch", "Loss", "Time"])
 
         start_time = time.time()
+        best_loss = float("inf")
 
         for episode in range(episodes):
             self.model.train()
@@ -201,6 +202,15 @@ class SDPAgentFF:
             loss.backward()
             self.opt.step()
             self.scheduler.step(loss)
+
+            # Check if the current loss is better (lower) than the best loss seen so far
+            if loss.item() < best_loss:
+                best_loss = loss.item()
+                best_model_path = f"{check_point_dir}/best_model.pt"
+                torch.save(self.model.state_dict(), best_model_path)
+                logging.info(
+                    f"Saved new best model at episode {episode} with loss: {best_loss}"
+                )
 
             if episode % 50 == 0 and episode != 0:
                 logging.info(f"Episode {episode} finished - Loss: {loss.item()}")

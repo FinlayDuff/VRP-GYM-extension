@@ -31,7 +31,7 @@ class SantaIRPEnv(IRPEnv):
         self.max_energy = 1
 
         self.energy = self.max_energy * np.ones(self.batch_size)
-        self.energy_depletion_penalty = round(0.1 * self.num_nodes)
+        self.energy_depletion_penalty = round(0.5 * self.num_nodes)
 
         # Wind factor related variables
         self.energy_strategy = "return"  # "stop": Stops the run or "return": Back to depot, apply penalty and continue (default)
@@ -50,22 +50,9 @@ class SantaIRPEnv(IRPEnv):
     def reset(self):
         state = super().reset()
 
-        ## THESE ALL RELATE TO CHILD BEHAVIOUR
-        # self.child_behavior = torch.randint(low=0, high=2, size=(self.batch_size, self.num_nodes))
-        # self.santa_carrying = torch.randint(low=0, high=2, size=(self.batch_size, self.num_nodes))
-        # self.pickup()
-
         self.energy = self.max_energy * np.ones(self.batch_size)
 
         return state
-
-    # def pickup(self):
-    #     item_choice = np.random.choice(["present", "coal"])
-    #     self.santa_carrying = (
-    #         {"present": 1, "coal": 0}
-    #         if item_choice == "present"
-    #         else {"present": 0, "coal": 1}
-    #     )
 
     def step(self, action):
         # super-init the step from the IRP environment
@@ -115,28 +102,18 @@ class SantaIRPEnv(IRPEnv):
             # Replenish load
             self.load = np.where(mask, 1, self.load)
 
-            # if np.any(depleted):
-            #     print("energy", self.energy)
-            #     print("load", self.load)
-
-        # Need to penalise returning to the depot
-        mask = np.squeeze(self.current_location) == np.squeeze(self.depots)
-        reward -= mask.astype(float)
+        # # Need to penalise returning to the depot
+        # mask = np.squeeze(self.current_location) == np.squeeze(self.depots)
+        # reward -= mask.astype(float)
 
         return observation, reward, done, info
 
     def get_state(self):
         state, load = super().get_state()
 
-        # Ensure child_behavior is numerical and correctly shaped
-        # if self.child_behavior.ndim == 1:
-        #     child_behavior_expanded = np.tile(self.child_behavior, (batch_size, 1))
-        # else:
-        #     child_behavior_expanded = self.child_behavior
-
-        # child_behavior_state = child_behavior_expanded.reshape(batch_size, num_nodes, 1)
-
+        # Add on the load to the state so that each node has the current load of the vehicle
         load_reshaped = load[:, np.newaxis, np.newaxis]
+        # Add on the energy to the state so that each node has the current energy of the vehicle
         energy_reshaped = self.energy[:, np.newaxis, np.newaxis]
 
         # Expand load_reshaped and energy_reshaped to match the shape of state
@@ -146,20 +123,3 @@ class SantaIRPEnv(IRPEnv):
         # Concatenate the expanded arrays with the existing state
         updated_state = np.concatenate((state, load_expanded, energy_expanded), axis=2)
         return updated_state, load
-
-    # def generate_mask(self):
-    #     print("super_init started")
-
-    #     mask = super().generate_mask()
-    #     # Iterate over each instance in the batch
-    #     for i in range(self.batch_size):
-    #         # Indices where children are good and Santa has no presents
-    #         good_child_mask = (self.child_behavior[i] == 1) & (self.santa_carrying[i]["present"] == 0)
-
-    #         # Indices where children are bad and Santa has no coal
-    #         bad_child_mask = (self.child_behavior[i] == 0) & (self.santa_carrying[i]["coal"] == 0)
-
-    #         # Update the mask for the i-th instance
-    #         mask[i][good_child_mask] = 1
-    #         mask[i][bad_child_mask] = 1
-    #     return mask
