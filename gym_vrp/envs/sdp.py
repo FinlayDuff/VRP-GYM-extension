@@ -28,15 +28,15 @@ class SantaIRPEnv(IRPEnv):
 
         # Configurable reward and penalty values
         # self.max_energy = self.num_nodes * 100
-        self.max_energy = 75
+        self.max_energy = 1
 
         self.energy = self.max_energy * np.ones(self.batch_size)
-        self.energy_depletion_penalty = 2 * self.num_nodes
+        self.energy_depletion_penalty = round(0.1 * self.num_nodes)
 
         # Wind factor related variables
         self.energy_strategy = "return"  # "stop": Stops the run or "return": Back to depot, apply penalty and continue (default)
         # self.base_energy_consumption_rate = self.num_nodes
-        self.base_energy_consumption_rate = 10
+        self.base_energy_consumption_rate = self.max_energy * 0.2
 
         self.wind_factor_range = (
             0.5,
@@ -82,6 +82,7 @@ class SantaIRPEnv(IRPEnv):
         # Update self.energy for each batch item based on energy consumption
         self.energy -= energy_consumption
 
+        # replenish energy if now at the depot
         mask = np.squeeze(self.current_location) == np.squeeze(self.depots)
         self.energy = np.where(mask, self.max_energy, self.energy)
 
@@ -117,6 +118,10 @@ class SantaIRPEnv(IRPEnv):
             # if np.any(depleted):
             #     print("energy", self.energy)
             #     print("load", self.load)
+
+        # Need to penalise returning to the depot
+        mask = np.squeeze(self.current_location) == np.squeeze(self.depots)
+        reward -= mask.astype(float)
 
         return observation, reward, done, info
 

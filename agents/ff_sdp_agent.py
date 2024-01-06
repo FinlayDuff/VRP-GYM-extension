@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+
 import csv
 import logging
 import os
@@ -21,16 +23,43 @@ class FFNetwork(nn.Module):
 
         # Define the architecture of the network
         self.layer1 = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim), nn.ReLU(), nn.Dropout(dropout_rate)
+            nn.Linear(input_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.LeakyReLU(negative_slope=0.01),
+            nn.Dropout(dropout_rate),
         )
         self.layer2 = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim), nn.ReLU(), nn.Dropout(dropout_rate)
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.LeakyReLU(negative_slope=0.01),
+            nn.Dropout(dropout_rate),
+        )
+
+        self.layer3 = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.LeakyReLU(negative_slope=0.01),
+            nn.Dropout(dropout_rate),
         )
 
         self.output_layer = nn.Linear(hidden_dim, output_dim)
 
         # Baseline
         self.value_layer = nn.Linear(hidden_dim, 1)
+
+        # Initialize weights
+        self._initialize_weights()
+
+    def _initialize_weights(self):
+        # Iterate through all modules in the network
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                # Apply He initialization
+                nn.init.kaiming_uniform_(m.weight, mode="fan_in", nonlinearity="relu")
+
+                # Initialize biases to 0, if they exist
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
 
     def forward(self, env, rollout=False) -> Tuple[float]:
         # Forward pass through the network
@@ -50,6 +79,7 @@ class FFNetwork(nn.Module):
             x = state.view(state.shape[0], -1)
             x = self.layer1(x)
             x = self.layer2(x)
+            x = self.layer3(x)
 
             # store state value
             state_value = self.value_layer(x)
@@ -70,6 +100,10 @@ class FFNetwork(nn.Module):
 
             if rollout:
                 # If rollout is True, select actions greedily
+                # print("actions", normalized_prob)
+                # print("depots", env.depots)
+                # print("energy", env.energy)
+                # print("load", env.load)
                 actions = torch.argmax(normalized_prob, dim=1).unsqueeze(1)
                 log_prob = torch.log(torch.gather(normalized_prob, 1, actions))
             else:
@@ -119,6 +153,9 @@ class SDPAgentFF:
         ).to(self.device)
 
         self.opt = torch.optim.Adam(self.model.parameters(), lr=lr)
+        self.scheduler = ReduceLROnPlateau(
+            self.opt, mode="min", factor=0.1, patience=200, min_lr=1e-6, verbose=True
+        )
 
     def train(
         self,
@@ -163,6 +200,7 @@ class SDPAgentFF:
             self.opt.zero_grad()
             loss.backward()
             self.opt.step()
+            self.scheduler.step(loss)
 
             if episode % 50 == 0 and episode != 0:
                 logging.info(f"Episode {episode} finished - Loss: {loss.item()}")
