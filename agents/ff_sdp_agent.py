@@ -16,7 +16,9 @@ import numpy as np
 class FFNetwork(nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim, dropout_rate):
         """
-        We define a network with drop out, activation of Relu and a value layer for our baseline.
+        We define a network with drop out, BatchNormalisation, activation of LeakyRelu.
+        Also defined is a value layer for a baseline in REINFORCE.
+        Weight initialisation is handled by the kaiming method.
         """
         super().__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -66,8 +68,8 @@ class FFNetwork(nn.Module):
 
         # Init vars
         done = False
-        irp_state, irp_load = env.get_state()
-        state = torch.tensor(irp_state, dtype=torch.float, device=self.device)
+        state, load = env.get_state()
+        state = torch.tensor(state, dtype=torch.float, device=self.device)
 
         # Initialise lists of values to be stored in episode
         rewards = []
@@ -100,19 +102,13 @@ class FFNetwork(nn.Module):
 
             if rollout:
                 # If rollout is True, select actions greedily
-                # print("actions", normalized_prob)
-                # print("depots", env.depots)
-                # print("energy", env.energy)
-                # print("load", env.load)
                 actions = torch.argmax(normalized_prob, dim=1).unsqueeze(1)
                 log_prob = torch.log(torch.gather(normalized_prob, 1, actions))
             else:
                 # If rollout is False, sample actions stochastically
                 # Sample action from the normalized, masked probabilities for the whole batch
                 m = torch.distributions.Categorical(normalized_prob)
-                actions = m.sample().unsqueeze(
-                    1
-                )  # actions should have shape (batch_size, 1)
+                actions = m.sample().unsqueeze(1)
                 log_prob = m.log_prob(actions.squeeze())
 
             state, loss, done, _ = env.step(actions.cpu().numpy())
@@ -121,8 +117,8 @@ class FFNetwork(nn.Module):
             rewards.append(torch.tensor(loss, dtype=torch.float, device=self.device))
             state_values.append(state_value.squeeze().to(self.device))
 
-            irp_state, irp_load = env.get_state()
-            state = torch.tensor(irp_state, dtype=torch.float, device=self.device)
+            state, load = env.get_state()
+            state = torch.tensor(state, dtype=torch.float, device=self.device)
 
         return torch.stack(rewards), torch.stack(log_probs), torch.stack(state_values)
 
@@ -237,9 +233,6 @@ class SDPAgentFF:
             running_add = running_add * self.gamma + rewards[t]
             discounted_r[t] = running_add
 
-        # Standardize the rewards to be unit normal (helps control the gradient estimator variance)
-        # discounted_r -= discounted_r.mean()
-        # discounted_r /= discounted_r.std() + 1e-10
         return discounted_r
 
     def save_model(self, episode: int, check_point_dir: str) -> None:

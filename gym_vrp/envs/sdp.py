@@ -22,32 +22,26 @@ class SantaIRPEnv(IRPEnv):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # self.seed = np.random.seed(23)
-
-        # self.child_behavior = torch.randint(low=0, high=2, size=(self.batch_size, self.num_nodes))
 
         # Configurable reward and penalty values
-        # self.max_energy = self.num_nodes * 100
         self.max_energy = 1
-
         self.energy = self.max_energy * np.ones(self.batch_size)
         self.energy_depletion_penalty = round(0.5 * self.num_nodes)
 
         # Wind factor related variables
         self.energy_strategy = "return"  # "stop": Stops the run or "return": Back to depot, apply penalty and continue (default)
-        # self.base_energy_consumption_rate = self.num_nodes
         self.base_energy_consumption_rate = self.max_energy * 0.2
 
+        # Stochastic element: wind impacts the energy consumed by the vehicle each journey
         self.wind_factor_range = (
             0.5,
             1.5,
-        )  # Wind can decrease or increase energy consumption
-
-        # self.present_types = ("present", "coal")
-        # Santa can carry multiple items
-        # self.pickup()
+        )
 
     def reset(self):
+        """
+        Reset the energy of santa at each reset. Load is handled by the IRP reset
+        """
         state = super().reset()
 
         self.energy = self.max_energy * np.ones(self.batch_size)
@@ -102,13 +96,17 @@ class SantaIRPEnv(IRPEnv):
             # Replenish load
             self.load = np.where(mask, 1, self.load)
 
-        # # Need to penalise returning to the depot
-        # mask = np.squeeze(self.current_location) == np.squeeze(self.depots)
-        # reward -= mask.astype(float)
-
         return observation, reward, done, info
 
     def get_state(self):
+        """
+        Getter for the current environment state.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]: Shape (num_graph, num_nodes, 7)
+                The third dimension is structured as follows:
+            [x_coord, y_coord, demand, is_depot, visitable, vehicle_load, vehicle_energy]
+        """
         state, load = super().get_state()
 
         # Add on the load to the state so that each node has the current load of the vehicle
