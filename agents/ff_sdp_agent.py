@@ -111,10 +111,10 @@ class FFNetwork(nn.Module):
                 actions = m.sample().unsqueeze(1)
                 log_prob = m.log_prob(actions.squeeze())
 
-            state, loss, done, _ = env.step(actions.cpu().numpy())
+            state, reward, done, _ = env.step(actions.cpu().numpy())
 
             log_probs.append(log_prob.squeeze().to(self.device))
-            rewards.append(torch.tensor(loss, dtype=torch.float, device=self.device))
+            rewards.append(torch.tensor(reward, dtype=torch.float, device=self.device))
             state_values.append(state_value.squeeze().to(self.device))
 
             state, load = env.get_state()
@@ -271,9 +271,9 @@ class SDPAgentFF:
         env.reset()
 
         # Go through graph batch and get loss
-        loss, log_prob, state_values = self.model(env)
+        rewards, log_prob, state_values = self.model(env)
 
-        return loss, log_prob, state_values
+        return rewards, log_prob, state_values
 
     def evaluate(self, env):
         """
@@ -291,6 +291,6 @@ class SDPAgentFF:
 
         # This chooses greedily
         with torch.no_grad():
-            loss, _, _ = self.model(env, rollout=True)
+            rewards, _, _ = self.model(env, rollout=True)
 
-        return loss
+        return rewards

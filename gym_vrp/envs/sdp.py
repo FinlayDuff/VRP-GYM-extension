@@ -13,7 +13,7 @@ class SantaIRPEnv(IRPEnv):
 
     State: Shape (batch_size, num_nodes, 6) The third
         dimension is structured as follows:
-        [x_coord, y_coord, demand, is_depot, visitable, good_or_bad]
+        [x_coord, y_coord, demand, is_depot, visitable, vehicle_load, vehicle_energy]
 
     Actions: Depends on the number of nodes in every graph.
         Should contain the node numbers to visit next for
