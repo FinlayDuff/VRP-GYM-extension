@@ -1,40 +1,64 @@
-from gym_vrp.envs import VRPEnv, IRPEnv, TSPEnv
-from agents import TSPAgent, IRPAgent, VRPAgent
+from gym_vrp.envs import SantaIRPEnv, SantaIRPEnv_RNN
+from agents import SDPAgentRNN, SDPAgentFF
 
-seeds = [69, 123]
-num_nodes = [20, 30, 40]
-batch_size = 256
+seed = 123
+num_nodes = [3, 5, 7, 10, 15]
+batch_size = 128
+max_history_length = 10
 
-for seed in seeds:
-    for num_node in num_nodes:
-        env_tsp = TSPEnv(num_nodes=num_node, batch_size=batch_size, seed=seed)
-        env_vrp = VRPEnv(num_nodes=num_node, batch_size=batch_size, seed=seed)
-        env_irp = IRPEnv(num_nodes=num_node, batch_size=batch_size, seed=seed)
+num_epochs = 1001
+lr = 1e-4
+gamma = 0.99
+dropout_rate = 0.5
+hidden_dim_ff = 1024
+hidden_dim_rnn = 512
+num_layers = 1
 
-        agent_tsp = TSPAgent(
-            seed=seed, csv_path=f"./train_logs/loss_log_tsp_{num_node}_{seed}.csv",
-        )
-        agent_tsp.train(
-            env_tsp,
-            epochs=851,
-            check_point_dir=f"./check_points/tsp_{num_node}_{seed}/",
-        )
 
-        agent_vrp = VRPAgent(
-            seed=seed, csv_path=f"./train_logs/loss_log_vrp_{num_node}_{seed}.csv",
-        )
-        agent_vrp.train(
-            env_vrp,
-            epochs=851,
-            check_point_dir=f"./check_points/vrp_{num_node}_{seed}/",
-        )
+for node in num_nodes:
+    print(f"number of nodes: {node}")
+    env_santa_ff = SantaIRPEnv(
+        num_nodes=node, batch_size=batch_size, seed=seed, num_draw=3
+    )
+    env_santa_rnn = SantaIRPEnv_RNN(
+        num_nodes=node,
+        batch_size=batch_size,
+        seed=seed,
+        num_draw=3,
+        max_history_length=max_history_length,
+    )
 
-        agent_irp = IRPAgent(
-            seed=seed, csv_path=f"./train_logs/loss_log_irp_{num_node}_{seed}.csv",
-        )
-        agent_irp.train(
-            env_irp,
-            epochs=851,
-            check_point_dir=f"./check_points/irp_{num_node}_{seed}/",
-        )
+    print(f"\tTraining FF")
+    agent_santa_ff = SDPAgentFF(
+        node_dim=node,
+        hidden_dim=hidden_dim_ff,
+        lr=lr,
+        gamma=gamma,
+        dropout_rate=dropout_rate,
+        seed=seed,
+        csv_path=f"./train_logs/loss_log_santa_ff_{node}_{seed}.csv",
+    )
+    agent_santa_ff.train(
+        env_santa_ff,
+        episodes=num_epochs,
+        check_point_dir=f"./check_points/santa_ff_{node}_{seed}/",
+    )
 
+    print(f"\tTraining RNN")
+    agent = SDPAgentRNN(
+        node_dim=node,
+        num_features=7,
+        hidden_dim=hidden_dim_rnn,
+        lr=lr,
+        gamma=gamma,
+        dropout_rate=dropout_rate,
+        csv_path=f"./train_logs/loss_log_santa_rnn_{node}_{seed}.csv",
+        seed=seed,
+        num_layers=num_layers,
+    )
+
+    agent.train(
+        env_santa_rnn,
+        episodes=num_epochs,
+        check_point_dir=f"./check_points/santa_rnn_{node}_{seed}/",
+    )

@@ -11,6 +11,7 @@ from copy import deepcopy
 from typing import Tuple
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class FFNetwork(nn.Module):
@@ -158,6 +159,7 @@ class SDPAgentFF:
         env,
         episodes: int = 100,
         check_point_dir: str = "./check_points/",
+        eval_interval=50,
     ):
         """
         THIS IS BASIC REINFORCE
@@ -166,50 +168,57 @@ class SDPAgentFF:
         logging.info("Start Training")
         with open(self.csv_path, "w+", newline="") as file:
             writer = csv.writer(file)
-            writer.writerow(["Epoch", "Loss", "Time"])
+            writer.writerow(["Epoch", "Loss", "Train Reward", "Eval Reward", "Time"])
 
         start_time = time.time()
-        best_loss = float("inf")
+        evaluation_rewards = []
+        batch_avg_rewards = []
 
         for episode in range(episodes):
             self.model.train()
 
             rewards, log_probs, state_values = self.step(env)
+            mean_rewards = rewards.cumsum(dim=0)[-1].mean()
+            batch_avg_rewards.append(mean_rewards)
 
             # Compute discounted rewards (returns)
             discounted_rewards = self.discount_rewards(rewards)
 
-            # Calculate advantages (discounted_rewards - baseline)
-            advantages = -(discounted_rewards - state_values.detach().squeeze())
-
-            # Standardize
-            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-10)
+            discounted_rewards = (discounted_rewards - discounted_rewards.mean()) / (
+                discounted_rewards.std() + 1e-10
+            )
 
             # Calculate policy loss
-            policy_loss = (-log_probs * advantages).mean()
+            policy_loss = (-log_probs * discounted_rewards).mean()
 
+            # Calculate advantages (discounted_rewards - baseline)
+            # advantages = -(discounted_rewards - state_values.detach().squeeze())
+
+            # # Standardize
+            # advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-10)
             # loss betwee state value and rewards
-            value_loss = F.mse_loss(state_values.squeeze(), discounted_rewards)
+            # policy_loss = (-log_probs * advantages).mean()
+            # value_loss = F.mse_loss(state_values.squeeze(), discounted_rewards)
+            # loss = policy_loss + value_loss
 
-            loss = policy_loss + value_loss
+            loss = policy_loss
 
             # Backpropagation
             self.opt.zero_grad()
             loss.backward()
             self.opt.step()
-            self.scheduler.step(loss)
+            self.scheduler.step(mean_rewards)
 
-            # Check if the current loss is better (lower) than the best loss seen so far
-            if loss.item() < best_loss:
-                best_loss = loss.item()
-                best_model_path = f"{check_point_dir}/best_model.pt"
-                torch.save(self.model.state_dict(), best_model_path)
-                logging.info(
-                    f"Saved new best model at episode {episode} with loss: {best_loss}"
-                )
+            if episode % eval_interval == 0:
+                eval_reward = self.evaluate(env)
+                evaluation_rewards.append(eval_reward)
+            else:
+                eval_reward = np.nan
 
             if episode % 50 == 0 and episode != 0:
-                logging.info(f"Episode {episode} finished - Loss: {loss.item()}")
+                logging.info(
+                    f"Episode {episode} finished - Loss: {loss.item()} - Reward: {mean_rewards.item()}"
+                )
 
             # log training data
             with open(self.csv_path, "a", newline="") as file:
@@ -218,11 +227,14 @@ class SDPAgentFF:
                     [
                         episode,
                         loss.item(),
+                        mean_rewards.item(),
+                        eval_reward,
                         time.time() - start_time,
                     ]
                 )
 
             self.save_model(episode=episode, check_point_dir=check_point_dir)
+        # self.plot_learning_curve(batch_avg_rewards, evaluation_rewards)
 
     def discount_rewards(self, rewards):
         # Compute the discounted rewards (returns) for each time step
@@ -275,7 +287,7 @@ class SDPAgentFF:
 
         return rewards, log_prob, state_values
 
-    def evaluate(self, env):
+    def evaluate(self, env, num_episodes=10):
         """
         Evalutes the current model on the given environment.
 
@@ -287,10 +299,34 @@ class SDPAgentFF:
             torch.Tensor: Reward (e.g. -cost) of the current model.
         """
         # This turns off the dropout
+        logging.info("Start Evaluation")
         self.model.eval()
 
+        episode_reward = []
         # This chooses greedily
         with torch.no_grad():
-            rewards, _, _ = self.model(env, rollout=True)
+            for ep in range(num_episodes):
+                env.reset()
+                rewards, _, _ = self.model(env, rollout=True)
+                mean_rewards = rewards.cumsum(dim=0)[-1].mean()
+                episode_reward.append(mean_rewards.item())
+        total_mean_rewards = np.mean(episode_reward)
+        logging.info(f"Average Reward: {total_mean_rewards}")
 
-        return rewards
+        return total_mean_rewards
+
+    def plot_learning_curve(self, episode_rewards, evaluation_rewards):
+        plt.figure(figsize=(12, 6))
+        plt.plot(episode_rewards, label="Training Reward")
+        plt.plot(
+            np.arange(
+                0, len(episode_rewards), len(episode_rewards) / len(evaluation_rewards)
+            ),
+            evaluation_rewards,
+            label="Evaluation Reward",
+        )
+        plt.xlabel("Episodes")
+        plt.ylabel("Reward")
+        plt.title("Learning Curve")
+        plt.legend()
+        plt.show()

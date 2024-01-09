@@ -1,7 +1,3 @@
-from .graph_irp_agent import IRPAgent
-from .graph_vrp_agent import VRPAgent
-from .graph_tsp_agent import TSPAgent
 from .random_agent import RandomAgent
-from .graph_decoder import GraphDecoder
-from .graph_encoder import GraphEncoder, GraphDemandEncoder
-from .ff_tsp_agent import TSPAgentFF
+from .ff_sdp_agent import SDPAgentFF
+from .rnn_sdp_agent import SDPAgentRNN

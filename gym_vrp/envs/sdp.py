@@ -8,10 +8,11 @@ class SantaIRPEnv(IRPEnv):
     """
     SantaIRPEnv implements the Santa Inventory Routing Problem a variant
     of the Vehicle Routing Problem. The vehicle has a
-    capacity of 1. Visiting a node is only allowed if the
-    cars capacity is greater or equal than the nodes demand.
+    capacity of 1 and an energy of 1. Visiting a node is only allowed if the
+    cars capacity is greater or equal than the nodes demand. If the energy is depleted then
+    the agent is penalised. Returning to the depot replenishes both energy and load
 
-    State: Shape (batch_size, num_nodes, 6) The third
+    State: Shape (batch_size, num_nodes, 7) The third
         dimension is structured as follows:
         [x_coord, y_coord, demand, is_depot, visitable, vehicle_load, vehicle_energy]
 
@@ -26,6 +27,7 @@ class SantaIRPEnv(IRPEnv):
         # Configurable reward and penalty values
         self.max_energy = 1
         self.energy = self.max_energy * np.ones(self.batch_size)
+        # Decide to only slightly penalise relative to the number of nodes
         self.energy_depletion_penalty = round(0.5 * self.num_nodes)
 
         # Wind factor related variables
@@ -68,7 +70,7 @@ class SantaIRPEnv(IRPEnv):
         self.energy = np.where(mask, self.max_energy, self.energy)
 
         # This creates a boolean tensor indicating which elements have depleted energy
-        depleted = self.energy <= 0
+        depleted = (self.energy <= 0) & (~done)
 
         # Apply energy depletion penalty
         reward -= self.energy_depletion_penalty * depleted.astype(float)
