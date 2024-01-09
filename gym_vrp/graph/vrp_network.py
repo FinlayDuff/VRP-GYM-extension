@@ -12,6 +12,8 @@ class VRPNetwork:
         num_nodes: int,
         num_depots: int,
         plot_demand: bool = False,
+        energy=None,
+        load=None
     ) -> List[VRPGraph]:
         """
         Creates num_graphs random generated fully connected 
@@ -32,14 +34,17 @@ class VRPNetwork:
             num_nodes >= num_depots
         ), "Number of depots should be lower than number of depots"
 
+        self.energy = energy
+        self.load = load
+
         self.num_nodes = num_nodes
         self.num_depots = num_depots
         self.num_graphs = num_graphs
         self.graphs: List[VRPGraph] = []
 
         # generate a graph with nn nodes and nd depots
-        for _ in range(num_graphs):
-            self.graphs.append(VRPGraph(num_nodes, num_depots, plot_demand=plot_demand))
+        for i in range(num_graphs):
+            self.graphs.append(VRPGraph(num_nodes, num_depots, plot_demand=plot_demand, this_energy=energy[i], this_load=load[i]))
 
     def get_distance(self, graph_idx: int, node_idx_1: int, node_idx_2: int) -> float:
         """

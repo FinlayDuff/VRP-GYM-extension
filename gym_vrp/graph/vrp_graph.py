@@ -1,12 +1,13 @@
 import networkx as nx
 import numpy as np
 
+import matplotlib.pyplot as plt
 
 class VRPGraph:
 
     graph: nx.Graph = nx.Graph()
 
-    def __init__(self, num_nodes: int, num_depots: int, plot_demand: bool = False):
+    def __init__(self, num_nodes: int, num_depots: int, plot_demand: bool = False, this_energy=None, this_load=None):
         """
         Creates a fully connected graph with node_num nodes
         and depot num depots. Coordinates of each node
@@ -16,6 +17,10 @@ class VRPGraph:
             node_num (int): Number of nodes in the graph.
             depot_num (int): Number of depots in the graph.
         """
+
+        self.this_energy = this_energy
+        self.this_load = this_load
+        
         self.num_nodes = num_nodes
         self.num_depots = num_depots
         self.plot_demand = plot_demand
@@ -74,26 +79,67 @@ class VRPGraph:
         )
 
         # draw edges that where visited
-        edges = [x for x in self.graph.edges(data=True) if x[2]["visited"]]
+        # edges = [x for x in self.graph.edges(data=True) if x[2]["visited"]]
+        # nx.draw_networkx_edges(
+        #     self.graph,
+        #     pos,
+        #     alpha=0.5,
+        #     edgelist=edges,
+        #     edge_color="red",
+        #     ax=ax,
+        #     width=1.5,
+        # )
+
+        # draw visited edges
+        visited_edges = [edge for edge in self.graph.edges(data=True) if edge[2]['visited']]
         nx.draw_networkx_edges(
             self.graph,
             pos,
-            alpha=0.5,
-            edgelist=edges,
-            edge_color="red",
+            edgelist=visited_edges,
+            edge_color='red',
             ax=ax,
-            width=1.5,
+            width=1.5
         )
+        
+        # draw edges that lead back to the depot with a dashed blue line
+        depot_edges = [edge for edge in visited_edges if edge[0] in self.depots or edge[1] in self.depots]
+        nx.draw_networkx_edges(
+            self.graph,
+            pos,
+            edgelist=depot_edges,
+            style='dashed',
+            edge_color='blue',
+            ax=ax,
+            width=1.5
+        )
+
 
         # draw demand above the node
 
         if self.plot_demand:
+
+
+
             demand_label_pos = {k: (v + self.offset) for k, v in pos.items()}
             node_demand = nx.get_node_attributes(self.graph, "demand")
             node_demand = {k: np.round(v, 2)[0] for k, v in node_demand.items()}
+
+            # node_demand = {key: 'D:{:.2f}'.format(value) for key, value in node_demand.items()}
+
             nx.draw_networkx_labels(
                 self.graph, demand_label_pos, labels=node_demand, ax=ax
             )
+
+        # Format the energy and load values to two decimal places
+        energy_text = f'Energy: {self.this_energy:.2f}'
+        load_text = f'Load: {self.this_load:.2f}'
+
+        # Plot the formatted energy and load in the top left corner
+        plt.text(0.05, 0.95, energy_text, transform=ax.transAxes, horizontalalignment='left', verticalalignment='top', fontsize=10, color='blue')
+        plt.text(0.05, 0.90, load_text, transform=ax.transAxes, horizontalalignment='left', verticalalignment='top', fontsize=10, color='green')
+
+
+
 
     def visit_edge(self, source_node: int, target_node: int) -> None:
         """

@@ -2,6 +2,8 @@ import numpy as np
 import torch
 from .irp import IRPEnv
 
+from ..graph.vrp_network import VRPNetwork
+
 
 class SantaIRPEnv(IRPEnv):
 
@@ -21,12 +23,17 @@ class SantaIRPEnv(IRPEnv):
     """
 
     def __init__(self, *args, **kwargs):
+
+        self.energy = None
+        self.load = None
         super().__init__(*args, **kwargs)
 
         # Configurable reward and penalty values
         self.max_energy = 1
         self.energy = self.max_energy * np.ones(self.batch_size)
         self.energy_depletion_penalty = round(0.5 * self.num_nodes)
+
+        super().__init__(*args, **kwargs)
 
         # Wind factor related variables
         self.energy_strategy = "return"  # "stop": Stops the run or "return": Back to depot, apply penalty and continue (default)
@@ -121,3 +128,37 @@ class SantaIRPEnv(IRPEnv):
         # Concatenate the expanded arrays with the existing state
         updated_state = np.concatenate((state, load_expanded, energy_expanded), axis=2)
         return updated_state, load
+
+    def generate_graphs(self):
+        """
+        Generates a VRPNetwork of batch_size graphs with num_nodes
+        each. Resets the visited nodes to 0.
+        """
+
+        if not hasattr(self, 'energy'):
+            self.energy = np.zeros(shape=(self.batch_size,))
+        if self.energy is None:
+            self.energy = np.zeros(shape=(self.batch_size,))
+
+        if not hasattr(self, 'load'):
+            self.load = np.zeros(shape=(self.batch_size,))
+        if self.load is None:
+            self.load = np.zeros(shape=(self.batch_size,))
+
+        print(self.energy)
+
+        self.visited = np.zeros(shape=(self.batch_size, self.num_nodes))
+        self.sampler = VRPNetwork(
+            num_graphs=self.batch_size,
+            num_nodes=self.num_nodes,
+            num_depots=1,
+            plot_demand=True,
+            energy=self.energy,
+            load=self.load,
+        )
+
+        # set current location to the depots
+        self.depots = self.sampler.get_depots()
+        self.current_location = self.depots
+
+        self.demands = self.sampler.get_demands()
