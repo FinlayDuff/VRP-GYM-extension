@@ -14,8 +14,8 @@ class VRPNetwork:
         plot_demand: bool = False,
     ) -> List[VRPGraph]:
         """
-        Creates num_graphs random generated fully connected 
-        graphs with num_nodes nodes. Node positions are 
+        Creates num_graphs random generated fully connected
+        graphs with num_nodes nodes. Node positions are
         sampled uniformly in [0, 1]. In each graph
         num_debots nodes are marked as depots.
 
@@ -43,7 +43,7 @@ class VRPNetwork:
 
     def get_distance(self, graph_idx: int, node_idx_1: int, node_idx_2: int) -> float:
         """
-        Calculates the euclid distance between the two nodes 
+        Calculates the euclid distance between the two nodes
         within a single graph in the VRPNetwork.
 
         Args:
@@ -68,7 +68,7 @@ class VRPNetwork:
 
         Returns:
             np.ndarray: Euclid distance between each
-                node pair. Shape (num_graphs,) 
+                node pair. Shape (num_graphs,)
         """
         return np.array(
             [
@@ -98,7 +98,7 @@ class VRPNetwork:
         Returns the demands for each node in each graph.
 
         Returns:
-            np.ndarray: Demands of each node in shape 
+            np.ndarray: Demands of each node in shape
                 (num_graphs, num_nodes, 1)
         """
         demands = np.zeros(shape=(self.num_graphs, self.num_nodes, 1))
@@ -113,8 +113,8 @@ class VRPNetwork:
 
         Args:
             graph_idxs (np.ndarray): Idxs of graphs which get drawn.
-                Expected to be of shape (x, ). 
-        
+                Expected to be of shape (x, ).
+
         Returns:
             np.ndarray: Plot as rgb-array of shape (width, height, 3).
         """
@@ -131,12 +131,14 @@ class VRPNetwork:
 
             self.graphs[graph_idx].draw(ax=ax)
 
-        plt.show()
+        # plt.show()
 
         # convert to plot to rgb-array
         fig.canvas.draw()
         data = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
         image = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+
+        plt.close(fig)
 
         return image
 

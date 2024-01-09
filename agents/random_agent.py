@@ -11,31 +11,48 @@ class RandomAgent(nn.Module):
     def __init__(self, seed: int = 69):
         super().__init__()
         np.random.seed(seed)
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    def forward(self, env) -> float:
-        state = env.get_state()
+    def evaluate(self, env, num_episodes=10) -> float:
+        episode_reward = []
+        # This chooses greedily
+        for ep in range(num_episodes):
+            env.reset()
+            total_rewards = []
+            done = False
+            while not done:
+                action = self.select_actions(env)
+                _, reward, done, _ = env.step(action)
 
-        # for IRPEnv
-        if isinstance(state, tuple):
-            state = state[0]
+                total_rewards.append(
+                    torch.tensor(reward, dtype=torch.float, device=self.device)
+                )
 
-        done = False
-        acc_loss = torch.zeros(size=(state.shape[0],))
+            mean_rewards = torch.stack(total_rewards).cumsum(dim=0)[-1].mean()
+            episode_reward.append(mean_rewards.item())
 
-        # play game
-        while not done:
-            # for IRPEnv
-            if isinstance(state, tuple):
-                state = state[0]
+        total_mean_rewards = np.mean(episode_reward)
+        return total_mean_rewards
 
-            # get prediction for current state
-            actions = []
-            for i in range(state.shape[0]):
-                pos_nodes = np.argwhere(state[i, :, -1] == 0).flatten()
-                actions.append(np.random.choice(pos_nodes, 1)[0])
+    def select_actions(self, env):
+        action_probabilities = self.generate_uniform_probabilities(
+            env.batch_size, env.num_nodes
+        )
+        # Mask the actions which are not allowed and normalise the probabilities given these missing actions
+        mask = torch.from_numpy(env.generate_mask()).float().to(self.device)
+        mask = 1 - mask
+        masked_prob = action_probabilities * mask
 
-            state, loss, done, _ = env.step(np.array(actions)[:, None])
+        # Re-normalize the masked probabilities
+        normalized_prob = masked_prob / masked_prob.sum()
+        # Re-normalize the masked probabilities
+        normalized_prob = masked_prob / masked_prob.sum(dim=1, keepdim=True)
 
-            acc_loss += torch.tensor(loss, dtype=torch.float)
+        m = torch.distributions.Categorical(normalized_prob)
+        actions = m.sample().unsqueeze(1)
 
-        return acc_loss  # shape (batch_size)
+        return actions.cpu().numpy()
+
+    def generate_uniform_probabilities(self, batch_size, num_nodes):
+        probabilities = np.ones((batch_size, num_nodes)) / num_nodes
+        return torch.from_numpy(probabilities).float().to(self.device)

@@ -6,13 +6,13 @@ num_nodes = [3, 5, 7, 10, 15]
 batch_size = 128
 max_history_length = 10
 
-num_epochs = 1001
+num_epochs = 2001
 lr = 1e-4
 gamma = 0.99
 dropout_rate = 0.5
 hidden_dim_ff = 1024
 hidden_dim_rnn = 512
-num_layers = 1
+num_layers = 2
 
 
 for node in num_nodes:

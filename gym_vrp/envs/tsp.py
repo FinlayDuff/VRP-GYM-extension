@@ -35,10 +35,10 @@ class TSPEnv(Env):
         Args:
             num_nodes (int, optional): Number of nodes in each generated graph. Defaults to 32.
             batch_size (int, optional): Number of graphs to generate. Defaults to 128.
-            num_draw (int, optional): When calling the render num_draw graphs will be rendered. 
+            num_draw (int, optional): When calling the render num_draw graphs will be rendered.
                 Defaults to 6.
             seed (int, optional): Seed of the environment. Defaults to 69.
-            video_save_path (str, optional): When set a video of the interactions with the 
+            video_save_path (str, optional): When set a video of the interactions with the
                 environment is saved at the set location. Defaults to None.
         """
         assert (
@@ -130,11 +130,11 @@ class TSPEnv(Env):
 
     def generate_mask(self):
         """
-        Generates a mask of where the nodes marked as 1 cannot 
+        Generates a mask of where the nodes marked as 1 cannot
         be visited in the next step according to the env dynamic.
 
         Returns:
-            np.ndarray: Returns mask for each (un)visitable node 
+            np.ndarray: Returns mask for each (un)visitable node
                 in each graph. Shape (batch_size, num_nodes)
         """
         # disallow staying on a depot
@@ -149,7 +149,7 @@ class TSPEnv(Env):
 
     def reset(self) -> Union[ObsType, Tuple[ObsType, dict]]:
         """
-        Resets the environment. 
+        Resets the environment.
 
         Returns:
             Union[ObsType, Tuple[ObsType, dict]]: State of the environment.
@@ -166,7 +166,9 @@ class TSPEnv(Env):
         """
         self.visited = np.zeros(shape=(self.batch_size, self.num_nodes))
         self.sampler = VRPNetwork(
-            num_graphs=self.batch_size, num_nodes=self.num_nodes, num_depots=1,
+            num_graphs=self.batch_size,
+            num_nodes=self.num_nodes,
+            num_depots=1,
         )
 
         # set current location to the depots
@@ -175,14 +177,14 @@ class TSPEnv(Env):
 
     def render(self, mode: str = "human"):
         """
-        Visualize one step in the env. Since its batched 
+        Visualize one step in the env. Since its batched
         this methods renders n random graphs from the batch.
         """
         return self.sampler.draw(self.draw_idxs)
 
     def enable_video_capturing(self, video_save_path: str):
         self.video_save_path = video_save_path
-        self.render_mode = 'rgb_array'
+        self.render_mode = "rgb_array"
         if self.video_save_path is not None:
             self.vid = VideoRecorder(self, self.video_save_path)
             self.vid.frames_per_sec = 1
