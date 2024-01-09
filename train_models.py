@@ -2,12 +2,12 @@ from gym_vrp.envs import SantaIRPEnv, SantaIRPEnv_RNN
 from agents import SDPAgentRNN, SDPAgentFF
 
 seed = 123
-num_nodes = [3, 5, 7, 10, 15]
+num_nodes = [3, 5, 7, 10, 15, 20, 30]
 batch_size = 128
 max_history_length = 10
 
-num_epochs = 2001
-lr = 1e-4
+num_epochs = 501
+lr = 1e-3
 gamma = 0.99
 dropout_rate = 0.5
 hidden_dim_ff = 1024
@@ -44,21 +44,21 @@ for node in num_nodes:
         check_point_dir=f"./check_points/santa_ff_{node}_{seed}/",
     )
 
-    print(f"\tTraining RNN")
-    agent = SDPAgentRNN(
-        node_dim=node,
-        num_features=7,
-        hidden_dim=hidden_dim_rnn,
-        lr=lr,
-        gamma=gamma,
-        dropout_rate=dropout_rate,
-        csv_path=f"./train_logs/loss_log_santa_rnn_{node}_{seed}.csv",
-        seed=seed,
-        num_layers=num_layers,
-    )
+    # print(f"\tTraining RNN")
+    # agent = SDPAgentRNN(
+    #     node_dim=node,
+    #     num_features=7,
+    #     hidden_dim=hidden_dim_rnn,
+    #     lr=lr,
+    #     gamma=gamma,
+    #     dropout_rate=dropout_rate,
+    #     csv_path=f"./train_logs/loss_log_santa_rnn_{node}_{seed}.csv",
+    #     seed=seed,
+    #     num_layers=num_layers,
+    # )
 
-    agent.train(
-        env_santa_rnn,
-        episodes=num_epochs,
-        check_point_dir=f"./check_points/santa_rnn_{node}_{seed}/",
-    )
+    # agent.train(
+    #     env_santa_rnn,
+    #     episodes=num_epochs,
+    #     check_point_dir=f"./check_points/santa_rnn_{node}_{seed}/",
+    # )

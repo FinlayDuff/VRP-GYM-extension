@@ -259,7 +259,7 @@ class SDPAgentFF:
         if not os.path.exists(check_point_dir):
             os.makedirs(check_point_dir)
 
-        if episode % 50 == 0 and episode != 0:
+        if episode % 50 == 0:
             torch.save(
                 self.model.state_dict(),
                 check_point_dir + f"model_epoch_{episode}.pt",
